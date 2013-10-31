@@ -124,10 +124,23 @@ display_shortcuts() {
 # Format: line_number:full_file_path
 process_shorcut_paths() {
     # Using : as the delimiter here should be fine, because : is not used in file names
-    awk -F':' '
-    {
-        print $2 " " $1;
-    };'
+
+    sack__got_subl=$(which subl)
+    if [ ! -z "$sack__got_subl" ]; then
+    	awk -F':' '
+    	{
+    		if ( $4 )
+	    	    print $1 ":" $2 ":" $3;
+	    	else
+	    	    print $1 ":" $2;
+    	};'
+    else
+    	awk -F':' '
+    	{
+    	    print $2 " " $1;
+    	};'
+    fi
+
 }
 
 # Remove the escaped characters that get piped from ack in order to preserve
@@ -153,13 +166,18 @@ create_shortcut_cmd() {
     sack__shortcut_cmd_path=~/bin/$sack__shortcut_cmd
     cat > $sack__shortcut_cmd_path <<SHORTCUT
 #!/bin/bash
-sack__vim_shortcut=\$(sed -n "\$1p" < $sack__shortcut_file)
-if [ -z "\$EDITOR" ]; then
-    sack__editor="$sack__default_editor"
+sack__editor_shortcut=\$(sed -n "\$1p" < $sack__shortcut_file)
+sack__got_subl=\$(which subl)
+if [ ! -z "\$sack__got_subl" ]; then
+    sack__editor="subl"
+	\$sack__editor \$sack__editor_shortcut
+elif [ ! -z "\$EDITOR" ]; then
+    sack__editor="$EDITOR"
+	\$sack__editor +\$sack__editor_shortcut
 else
-    sack__editor="\$EDITOR"
+    sack__editor="\$sack__default_editor"
+	\$sack__editor +\$sack__editor_shortcut
 fi
-\$sack__editor +\$sack__vim_shortcut
 SHORTCUT
     chmod +x $sack__shortcut_cmd_path
 }
